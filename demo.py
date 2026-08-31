@@ -90,22 +90,25 @@ if artifacts:
         score_pct = score_prob * 100
         is_flagged = score_prob >= optimal_threshold
         
-        # Determine Top Factors for THIS specific order
-        # We multiply the standardized/encoded feature values by the LR coefficients
-        # First, transform the input
-        transformed_features = model.named_steps['preprocessor'].transform(input_data)
-        coefficients = model.named_steps['classifier'].coef_[0]
-        
-        # Calculate feature contributions for this specific prediction
-        contributions = transformed_features[0] * coefficients
+        model_type = artifacts.get('model_type', 'Logistic Regression')
         feature_names = artifacts['feature_names']
         
-        contrib_df = pd.DataFrame({
-            'Feature': feature_names,
-            'Contribution': contributions
-        })
-        # Sort by highest positive contribution to the risk score
-        top_factors = contrib_df.sort_values(by='Contribution', ascending=False).head(3)
+        if model_type == 'Logistic Regression':
+            # Determine Top Factors for THIS specific order using LR coefficients
+            transformed_features = model.named_steps['preprocessor'].transform(input_data)
+            coefficients = model.named_steps['classifier'].coef_[0]
+            contributions = transformed_features[0] * coefficients
+            
+            contrib_df = pd.DataFrame({
+                'Feature': feature_names,
+                'Contribution': contributions
+            })
+            top_factors = contrib_df.sort_values(by='Contribution', ascending=False).head(3)
+            factors_title = "### Top Contributing Risk Factors (This Order)"
+        else:
+            # Fallback to Global Feature Importances for XGBoost
+            top_factors = feature_importances.head(3).rename(columns={'Importance': 'Contribution'})
+            factors_title = "### Top Global Risk Indicators"
         
         # UI Presentation
         st.divider()
@@ -114,9 +117,10 @@ if artifacts:
         with col1:
             st.metric("Risk Score", f"{score_pct:.1f}%", delta=f"{'FLAGGED' if is_flagged else 'CLEAR'}", delta_color="inverse")
             st.write(f"Decision Threshold: {optimal_threshold*100:.1f}%")
+            st.write(f"Model Type: {model_type}")
         
         with col2:
-            st.markdown("### Top Contributing Risk Factors")
+            st.markdown(factors_title)
             if score_prob < 0.05:
                 st.success("This order appears very safe. No significant risk factors detected.")
             else:

@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import pickle
+from xgboost import XGBClassifier
 
 def load_and_preprocess_data(filepath='synthetic_returns_data.csv'):
     df = pd.read_csv(filepath)
@@ -40,36 +41,121 @@ def load_and_preprocess_data(filepath='synthetic_returns_data.csv'):
     
     return X_train, X_test, y_train, y_test, preprocessor
 
+def evaluate_model(y_test, y_probs, model_name, cost_fp, cost_fn):
+    pr_auc = average_precision_score(y_test, y_probs)
+    print(f"{model_name} -> PR-AUC: {pr_auc:.4f}")
+    
+    # Cost analysis
+    precision, recall, thresholds = precision_recall_curve(y_test, y_probs)
+    thresholds_eval = np.append(thresholds, 1.0)
+    costs = []
+    
+    for thr in thresholds_eval:
+        y_pred_thr = (y_probs >= thr).astype(int)
+        fps = np.sum((y_pred_thr == 1) & (y_test == 0))
+        fns = np.sum((y_pred_thr == 0) & (y_test == 1))
+        total_cost = (fps * cost_fp) + (fns * cost_fn)
+        costs.append(total_cost)
+        
+    optimal_idx = np.argmin(costs)
+    optimal_threshold = thresholds_eval[optimal_idx]
+    min_cost = costs[optimal_idx]
+    
+    y_pred_opt = (y_probs >= optimal_threshold).astype(int)
+    prec_opt = precision_score(y_test, y_pred_opt)
+    rec_opt = recall_score(y_test, y_pred_opt)
+    f1_opt = f1_score(y_test, y_pred_opt)
+    
+    print(f"\n--- Cost Analysis ({model_name}) ---")
+    print(f"Optimal Decision Threshold: {optimal_threshold:.4f}")
+    print(f"Minimum Expected Total Cost: ₹{min_cost}")
+    print(f"Metrics at Optimal Threshold:")
+    print(f"  Precision: {prec_opt:.4f}")
+    print(f"  Recall: {rec_opt:.4f}")
+    print(f"  F1 Score: {f1_opt:.4f}")
+    
+    return {
+        'pr_auc': pr_auc,
+        'precision': precision,
+        'recall': recall,
+        'thresholds_eval': thresholds_eval,
+        'costs': costs,
+        'optimal_threshold': optimal_threshold,
+        'min_cost': min_cost,
+        'prec_opt': prec_opt,
+        'rec_opt': rec_opt,
+        'f1_opt': f1_opt
+    }
+
 def train_and_evaluate():
     print("Loading data...")
-    X_train, X_test, y_train, y_test, preprocessor = load_and_preprocess_data()
+    X_train, X_test, y_train, y_test, preprocessor_lr = load_and_preprocess_data()
     
-    print("Training Logistic Regression model...")
-    model = Pipeline(steps=[
-        ('preprocessor', preprocessor),
+    categorical_cols = ['item_category', 'payment_method_type']
+    numerical_cols = [col for col in X_train.columns if col not in categorical_cols]
+    
+    # 1. Logistic Regression
+    print("\n--- Training Logistic Regression model ---")
+    model_lr = Pipeline(steps=[
+        ('preprocessor', preprocessor_lr),
         ('classifier', LogisticRegression(max_iter=1000, class_weight='balanced', random_state=42))
     ])
+    model_lr.fit(X_train, y_train)
+    y_probs_lr = model_lr.predict_proba(X_test)[:, 1]
     
-    model.fit(X_train, y_train)
+    # 2. XGBoost
+    print("\n--- Training XGBoost model ---")
+    preprocessor_xgb = ColumnTransformer(
+        transformers=[
+            ('cat', OneHotEncoder(handle_unknown='ignore', drop='first'), categorical_cols)
+        ],
+        remainder='passthrough'
+    )
+    scale_pos_weight = np.sum(y_train == 0) / np.sum(y_train == 1)
+    model_xgb = Pipeline(steps=[
+        ('preprocessor', preprocessor_xgb),
+        ('classifier', XGBClassifier(scale_pos_weight=scale_pos_weight, random_state=42, use_label_encoder=False, eval_metric='logloss'))
+    ])
+    model_xgb.fit(X_train, y_train)
+    y_probs_xgb = model_xgb.predict_proba(X_test)[:, 1]
     
-    # Predict probabilities
-    y_probs = model.predict_proba(X_test)[:, 1]
+    # Evaluate
+    COST_FP = 500
+    COST_FN = 2000
     
-    # Calculate PR-AUC
-    pr_auc = average_precision_score(y_test, y_probs)
-    print(f"PR-AUC: {pr_auc:.4f}")
+    print("\n=== Evaluation Results ===")
+    res_lr = evaluate_model(y_test, y_probs_lr, "Logistic Regression", COST_FP, COST_FN)
+    res_xgb = evaluate_model(y_test, y_probs_xgb, "XGBoost", COST_FP, COST_FN)
     
-    # Calculate standard metrics at default threshold (0.5)
-    y_pred_default = (y_probs >= 0.5).astype(int)
-    print(f"Metrics at default 0.5 threshold:")
-    print(f"  Precision: {precision_score(y_test, y_pred_default):.4f}")
-    print(f"  Recall: {recall_score(y_test, y_pred_default):.4f}")
-    print(f"  F1 Score: {f1_score(y_test, y_pred_default):.4f}")
+    # Side-by-side comparison
+    print("\n=== Side-by-Side Comparison ===")
+    comp_df = pd.DataFrame({
+        'Model': ['Logistic Regression', 'XGBoost'],
+        'PR-AUC': [res_lr['pr_auc'], res_xgb['pr_auc']],
+        'Opt Threshold': [res_lr['optimal_threshold'], res_xgb['optimal_threshold']],
+        'Precision': [res_lr['prec_opt'], res_xgb['prec_opt']],
+        'Recall': [res_lr['rec_opt'], res_xgb['rec_opt']],
+        'F1 Score': [res_lr['f1_opt'], res_xgb['f1_opt']],
+        'Min Expected Cost (₹)': [res_lr['min_cost'], res_xgb['min_cost']]
+    })
+    print(comp_df.to_string(index=False))
     
-    # --- PR Curve Plot ---
-    precision, recall, thresholds = precision_recall_curve(y_test, y_probs)
+    # Plot PR Curve Comparison
     plt.figure(figsize=(8, 6))
-    plt.plot(recall, precision, marker='.', label=f'Logistic Regression (PR-AUC = {pr_auc:.2f})')
+    plt.plot(res_lr['recall'], res_lr['precision'], label=f"LR (PR-AUC = {res_lr['pr_auc']:.3f})")
+    plt.plot(res_xgb['recall'], res_xgb['precision'], label=f"XGB (PR-AUC = {res_xgb['pr_auc']:.3f})")
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve Comparison')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('pr_curve_comparison.png')
+    plt.close()
+    print("\nSaved PR Curve Comparison to pr_curve_comparison.png")
+
+    # Plot original PR Curve just for LR to not break old behavior expectations
+    plt.figure(figsize=(8, 6))
+    plt.plot(res_lr['recall'], res_lr['precision'], marker='.', label=f"Logistic Regression (PR-AUC = {res_lr['pr_auc']:.2f})")
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.title('Precision-Recall Curve')
@@ -77,43 +163,12 @@ def train_and_evaluate():
     plt.grid(True)
     plt.savefig('pr_curve.png')
     plt.close()
-    print("Saved PR Curve to pr_curve.png")
+    print("Saved Original PR Curve (LR) to pr_curve.png")
     
-    # --- Cost Analysis ---
-    # Cost per FP (blocking a legit customer: lost margin + trust). E.g., ₹500
-    # Cost per FN (fulfilling an abusive order: product loss + shipping). E.g., ₹2000
-    COST_FP = 500
-    COST_FN = 2000
-    
-    costs = []
-    # threshold arrays from precision_recall_curve omit the 1.0 threshold, so we append 1.0
-    thresholds_eval = np.append(thresholds, 1.0)
-    
-    for thr in thresholds_eval:
-        y_pred_thr = (y_probs >= thr).astype(int)
-        
-        # False Positives: predicted abusive (1) but actually legit (0)
-        fps = np.sum((y_pred_thr == 1) & (y_test == 0))
-        # False Negatives: predicted legit (0) but actually abusive (1)
-        fns = np.sum((y_pred_thr == 0) & (y_test == 1))
-        
-        total_cost = (fps * COST_FP) + (fns * COST_FN)
-        costs.append(total_cost)
-        
-    optimal_idx = np.argmin(costs)
-    optimal_threshold = thresholds_eval[optimal_idx]
-    min_cost = costs[optimal_idx]
-    
-    print(f"\n--- Cost Analysis ---")
-    print(f"Cost per FP: ₹{COST_FP}")
-    print(f"Cost per FN: ₹{COST_FN}")
-    print(f"Optimal Decision Threshold: {optimal_threshold:.4f}")
-    print(f"Minimum Expected Total Cost on Test Set: ₹{min_cost}")
-    
-    # Plot cost analysis
+    # Plot original Cost Analysis (LR)
     plt.figure(figsize=(8, 6))
-    plt.plot(thresholds_eval, costs, label='Total Expected Cost')
-    plt.axvline(optimal_threshold, color='r', linestyle='--', label=f'Optimal Threshold ({optimal_threshold:.2f})')
+    plt.plot(res_lr['thresholds_eval'], res_lr['costs'], label='Total Expected Cost (LR)')
+    plt.axvline(res_lr['optimal_threshold'], color='r', linestyle='--', label=f"Optimal Threshold ({res_lr['optimal_threshold']:.2f})")
     plt.xlabel('Decision Threshold')
     plt.ylabel('Total Cost (₹)')
     plt.title('Cost Analysis: Threshold vs Total Cost')
@@ -121,45 +176,55 @@ def train_and_evaluate():
     plt.grid(True)
     plt.savefig('cost_analysis.png')
     plt.close()
-    print("Saved Cost Analysis to cost_analysis.png")
+    print("Saved Original Cost Analysis to cost_analysis.png")
     
-    # Metrics at optimal threshold
-    y_pred_opt = (y_probs >= optimal_threshold).astype(int)
-    print(f"\nMetrics at Optimal {optimal_threshold:.2f} threshold:")
-    print(f"  Precision: {precision_score(y_test, y_pred_opt):.4f}")
-    print(f"  Recall: {recall_score(y_test, y_pred_opt):.4f}")
-    print(f"  F1 Score: {f1_score(y_test, y_pred_opt):.4f}")
+    # Feature Importances - Logistic Regression
+    cat_features_lr = model_lr.named_steps['preprocessor'].named_transformers_['cat'].get_feature_names_out(categorical_cols)
+    feature_names_lr = numerical_cols + list(cat_features_lr)
+    coef_lr = model_lr.named_steps['classifier'].coef_[0]
     
-    # --- Feature Importances / Explanations ---
-    # Extract feature names from ColumnTransformer
-    cat_features = model.named_steps['preprocessor'].named_transformers_['cat'].get_feature_names_out(X_train.select_dtypes(include=['object']).columns)
-    num_features = X_train.select_dtypes(exclude=['object']).columns.tolist()
-    feature_names = num_features + list(cat_features)
-    
-    coefficients = model.named_steps['classifier'].coef_[0]
-    
-    feat_importance = pd.DataFrame({
-        'Feature': feature_names,
-        'Coefficient': coefficients
+    feat_imp_lr = pd.DataFrame({
+        'Feature': feature_names_lr,
+        'Coefficient': coef_lr
     })
+    feat_imp_lr['Abs_Coefficient'] = feat_imp_lr['Coefficient'].abs()
+    feat_imp_lr = feat_imp_lr.sort_values(by='Abs_Coefficient', ascending=False)
     
-    # Sort by absolute value of coefficient
-    feat_importance['Abs_Coefficient'] = feat_importance['Coefficient'].abs()
-    feat_importance = feat_importance.sort_values(by='Abs_Coefficient', ascending=False)
+    print("\n--- Top Feature Importances (Logistic Regression) ---")
+    print(feat_imp_lr[['Feature', 'Coefficient']].head(10).to_string(index=False))
     
-    print("\n--- Top Feature Importances (Logistic Regression Coefficients) ---")
-    print(feat_importance[['Feature', 'Coefficient']].head(10).to_string(index=False))
+    # Feature Importances - XGBoost
+    cat_features_xgb = model_xgb.named_steps['preprocessor'].named_transformers_['cat'].get_feature_names_out(categorical_cols)
+    feature_names_xgb = list(cat_features_xgb) + numerical_cols
+    imp_xgb = model_xgb.named_steps['classifier'].feature_importances_
     
-    # Save the pipeline and the optimal threshold for the demo app
+    feat_imp_xgb = pd.DataFrame({
+        'Feature': feature_names_xgb,
+        'Importance (Gain)': imp_xgb
+    })
+    feat_imp_xgb = feat_imp_xgb.sort_values(by='Importance (Gain)', ascending=False)
+    
+    print("\n--- Top Feature Importances (XGBoost) ---")
+    print(feat_imp_xgb.head(10).to_string(index=False))
+    
+    # Save artifacts
     model_artifacts = {
-        'model': model,
-        'optimal_threshold': optimal_threshold,
-        'feature_names': feature_names,
-        'feature_importances': feat_importance
+        'logistic_regression': {
+            'model': model_lr,
+            'optimal_threshold': res_lr['optimal_threshold'],
+            'feature_names': feature_names_lr,
+            'feature_importances': feat_imp_lr
+        },
+        'xgboost': {
+            'model': model_xgb,
+            'optimal_threshold': res_xgb['optimal_threshold'],
+            'feature_names': feature_names_xgb,
+            'feature_importances': feat_imp_xgb
+        }
     }
     with open('model_artifacts.pkl', 'wb') as f:
         pickle.dump(model_artifacts, f)
-    print("\nSaved model and artifacts to model_artifacts.pkl")
+    print("\nSaved model artifacts (both models) to model_artifacts.pkl")
 
 if __name__ == "__main__":
     train_and_evaluate()
