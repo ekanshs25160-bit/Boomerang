@@ -23,9 +23,13 @@ def load_artifacts():
 artifacts = load_artifacts()
 
 if artifacts:
-    model = artifacts['model']
-    optimal_threshold = artifacts['optimal_threshold']
-    feature_importances = artifacts['feature_importances']
+    # Use logistic regression artifacts since train_eval.py serializes both now
+    model_data = artifacts.get('logistic_regression', artifacts)
+    model = model_data.get('model', artifacts.get('model'))
+    optimal_threshold = model_data.get('optimal_threshold', artifacts.get('optimal_threshold', 0.5))
+    feature_importances = model_data.get('feature_importances', artifacts.get('feature_importances'))
+    feature_names = model_data.get('feature_names', artifacts.get('feature_names'))
+    model_type = model_data.get('model_type', artifacts.get('model_type', 'Logistic Regression'))
     
     st.sidebar.header("Input Order Features")
     
@@ -89,9 +93,6 @@ if artifacts:
         score_prob = model.predict_proba(input_data)[0, 1]
         score_pct = score_prob * 100
         is_flagged = score_prob >= optimal_threshold
-        
-        model_type = artifacts.get('model_type', 'Logistic Regression')
-        feature_names = artifacts['feature_names']
         
         if model_type == 'Logistic Regression':
             # Determine Top Factors for THIS specific order using LR coefficients

@@ -1,0 +1,350 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Boomerang - Order Review Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-fixed": "#e2e2e2",
+                        "surface-bright": "#f8f9ff",
+                        "surface-variant": "#d3e4fe",
+                        "surface-tint": "#565e74",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#76777d",
+                        "tertiary": "#000000",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "on-primary-container": "#7c839b",
+                        "on-secondary": "#ffffff",
+                        "primary": "#000000",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#eff4ff",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#dae2fd",
+                        "surface-container-high": "#dce9ff",
+                        "on-secondary-fixed-variant": "#444749",
+                        "on-primary-fixed": "#131b2e",
+                        "on-surface-variant": "#45464d",
+                        "surface": "#f8f9ff",
+                        "surface-dim": "#cbdbf5",
+                        "outline-variant": "#c6c6cd",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-tertiary-container": "#838484",
+                        "inverse-primary": "#bec6e0",
+                        "on-background": "#0b1c30",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#213145",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#1a1c1c",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#e5eeff",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-surface": "#0b1c30",
+                        "background": "#f8f9ff",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "secondary-fixed": "#e0e3e5",
+                        "on-secondary-container": "#626567",
+                        "secondary-container": "#e0e3e5",
+                        "secondary": "#5c5f61",
+                        "error": "#ba1a1a",
+                        "primary-container": "#131b2e",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-secondary-fixed": "#191c1e"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    spacing: {
+                        "sidebar-width": "280px",
+                        "stack-lg": "32px",
+                        "margin-mobile": "16px",
+                        "stack-sm": "8px",
+                        "container-max": "1440px",
+                        "gutter": "24px",
+                        "stack-md": "16px"
+                    },
+                    fontFamily: {
+                        "label-sm": ["Inter"],
+                        "label-md": ["JetBrains Mono"],
+                        "headline-sm": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    fontSize: {
+                        "label-sm": ["11px", { "lineHeight": "12px", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-sm": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background h-full font-body-md overflow-hidden antialiased">
+<!-- TopNavBar -->
+<header class="h-16 fixed top-0 right-0 left-sidebar-width border-b border-outline-variant dark:border-outline bg-surface dark:bg-surface-dim z-30 flex items-center justify-between px-gutter w-[calc(100%-280px)] ml-sidebar-width">
+<div class="flex items-center gap-4">
+<span class="font-headline-sm text-headline-sm text-on-surface">Risk Management Console</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="w-full h-10 pl-8 pr-4 bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary-fixed rounded text-body-md outline-none transition-all" placeholder="Search orders..." type="text">
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low p-2 rounded-full h-10 w-10 flex items-center justify-center scale-95 active:opacity-80 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 0;">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low p-2 rounded-full h-10 w-10 flex items-center justify-center scale-95 active:opacity-80 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 0;">help_outline</span>
+</button>
+<button class="h-10 px-4 bg-primary text-on-primary rounded font-label-md text-label-md hover:opacity-90 transition-opacity">
+                    Create Case
+                </button>
+<div class="h-8 w-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant">
+<img alt="Admin Avatar" class="w-full h-full object-cover" data-alt="A small, professional headshot avatar of an enterprise system administrator. Clean lighting, neutral background, suitable for a dark modern UI setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrehi0LjZ-rOjiNrkfT-1_2FOCgUctKPXqEe9NG-YRa0oqMqM3n3uWOti8XAjINQ5t8HGcPITevnn9_bg7mUAvsJDkISu_J4T9_6I_XvHFoTfCLfCkdEKjNxn98DJb2Vni8MsG-6PztQBjmZEpdFLwMHJyf2UyGmguI54ndTw-U6v0Gqq4-9hdvwdJPDlF9US4ieAnoXSnvr8gvncFH0eXlIxiLCBH7W655tyaBprwO7Me5E03CQ">
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="w-sidebar-width h-screen fixed left-0 top-0 border-r border-outline-variant dark:border-outline bg-tertiary-container dark:bg-tertiary-container flex flex-col py-stack-lg z-40">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="h-10 w-10 rounded bg-primary flex items-center justify-center text-on-primary font-bold text-lg">
+                B
+            </div>
+<div>
+<h1 class="font-headline-md text-headline-md text-surface-bright">Boomerang</h1>
+<p class="font-label-sm text-label-sm text-on-secondary-container mt-1 uppercase tracking-wider">Enterprise Admin</p>
+</div>
+</div>
+<ul class="flex flex-col gap-2 mt-4 px-2 w-full font-body-md text-body-md">
+<li class="">
+<a class="flex items-center gap-3 py-3 px-4 rounded w-full text-surface-bright font-bold border-l-2 border-primary-fixed bg-on-primary-fixed-variant transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">assignment_late</span>
+                    Queue
+                </a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 py-3 px-4 rounded w-full text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant transition-colors transition-all duration-200 ease-in-out pl-4 ml-[2px]" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 0;">insights</span>
+                    Analytics
+                </a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 py-3 px-4 rounded w-full text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant transition-colors transition-all duration-200 ease-in-out pl-4 ml-[2px]" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 0;">rule</span>
+                    Rules
+                </a>
+</li>
+<li class="mt-auto pt-8">
+<a class="flex items-center gap-3 py-3 px-4 rounded w-full text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant transition-colors transition-all duration-200 ease-in-out pl-4 ml-[2px]" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 0;">settings</span>
+                    Settings
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-sidebar-width mt-16 h-[calc(100vh-64px)] flex w-[calc(100%-280px)]">
+<!-- Left Column: Order Queue (1/3) -->
+<div class="w-1/3 min-w-[320px] max-w-[400px] border-r border-outline-variant bg-surface h-full flex flex-col">
+<div class="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest sticky top-0 z-10">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Pending Review</h2>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded">24 Items</span>
+</div>
+<div class="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2 bg-surface-container-low">
+<!-- Selected Item -->
+<div class="bg-surface-container-lowest border-outline-variant border p-4 rounded cursor-pointer relative overflow-hidden ring-1 ring-primary-fixed shadow-sm">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-md text-label-md text-on-surface">#ORD-8492</span>
+<div class="bg-error/10 text-error font-label-sm text-label-sm px-2 py-1 rounded border-l border-error">
+                            High
+                        </div>
+</div>
+<div class="flex justify-between items-end mt-4">
+<span class="font-body-md text-body-md text-on-surface-variant">J. Harker</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">$1,240.00</span>
+</div>
+</div>
+<!-- Unselected Items -->
+<div class="bg-surface-container-lowest border border-outline-variant hover:border-outline p-4 rounded cursor-pointer transition-colors group">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">#ORD-8491</span>
+<div class="bg-yellow-500/10 text-yellow-700 font-label-sm text-label-sm px-2 py-1 rounded border-l border-yellow-500">
+                            Medium
+                        </div>
+</div>
+<div class="flex justify-between items-end mt-4">
+<span class="font-body-md text-body-md text-on-surface-variant">M. Mina</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">$85.50</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant hover:border-outline p-4 rounded cursor-pointer transition-colors group">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">#ORD-8490</span>
+<div class="bg-error/10 text-error font-label-sm text-label-sm px-2 py-1 rounded border-l border-error">
+                            High
+                        </div>
+</div>
+<div class="flex justify-between items-end mt-4">
+<span class="font-body-md text-body-md text-on-surface-variant">A. Holmwood</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">$3,450.00</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant hover:border-outline p-4 rounded cursor-pointer transition-colors group">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">#ORD-8489</span>
+<div class="bg-yellow-500/10 text-yellow-700 font-label-sm text-label-sm px-2 py-1 rounded border-l border-yellow-500">
+                            Medium
+                        </div>
+</div>
+<div class="flex justify-between items-end mt-4">
+<span class="font-body-md text-body-md text-on-surface-variant">Q. Morris</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">$412.00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Detailed View (2/3) -->
+<div class="flex-1 h-full flex flex-col bg-background relative overflow-hidden">
+<div class="flex-1 overflow-y-auto p-gutter pb-32">
+<!-- Header -->
+<div class="flex justify-between items-end mb-8 border-b border-outline-variant pb-6">
+<div>
+<div class="flex items-center gap-3 mb-2">
+<h2 class="font-display-lg text-display-lg text-on-surface">#ORD-8492</h2>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded">Pending</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span> Oct 24, 2023, 10:15 AM
+                            <span class="mx-2 text-outline-variant">|</span>
+<span class="material-symbols-outlined text-[16px]">person</span> Jonathan Harker
+                        </p>
+</div>
+<div class="text-right">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Total Value</p>
+<p class="font-display-lg text-display-lg text-on-surface">$1,240.00</p>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Risk Score Widget -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded p-6 flex flex-col items-center justify-center text-center">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase w-full text-left mb-6">Risk Assessment</h3>
+<div class="relative w-32 h-32 mb-4">
+<!-- Circular Progress SVG -->
+<svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+<circle class="text-surface-container-high" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-error" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="45.2" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-headline-md text-headline-md text-on-surface">82</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">/100</span>
+</div>
+</div>
+<div class="bg-error/10 text-error font-label-sm text-label-sm px-3 py-1 rounded border-l-2 border-error uppercase tracking-widest mt-2">
+                            High Risk
+                        </div>
+</div>
+<!-- AI Explainability Card -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded p-6 flex flex-col">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">psychology</span>
+                            Top Risk Factors
+                        </h3>
+<ul class="space-y-4 flex-1">
+<li class="flex items-start gap-3 p-3 bg-surface-container-low rounded border border-outline-variant/50">
+<span class="material-symbols-outlined text-error mt-0.5">warning</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface mb-1">High Historical Return Rate</p>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Customer has returned 85% of items purchased in the last 6 months.</p>
+</div>
+</li>
+<li class="flex items-start gap-3 p-3 bg-surface-container-low rounded border border-outline-variant/50">
+<span class="material-symbols-outlined text-yellow-600 mt-0.5">info</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface mb-1">Bracketing Behavior Detected</p>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Order contains multiple sizes of the same SKU.</p>
+</div>
+</li>
+<li class="flex items-start gap-3 p-3 bg-surface-container-low rounded border border-outline-variant/50">
+<span class="material-symbols-outlined text-yellow-600 mt-0.5">location_off</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface mb-1">Shipping Address Mismatch</p>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Shipping address is &gt;500 miles from billing address.</p>
+</div>
+</li>
+</ul>
+</div>
+<!-- Customer Snapshot Card -->
+<div class="col-span-12 bg-surface-container-lowest border border-outline-variant rounded p-6">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">account_box</span>
+                            Customer Profile
+                        </h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Account Age</p>
+<p class="font-headline-sm text-headline-sm text-on-surface">12 days</p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Past Orders</p>
+<p class="font-headline-sm text-headline-sm text-on-surface">1 <span class="text-on-surface-variant text-sm font-normal">(Returned)</span></p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Payment Method</p>
+<p class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">local_shipping</span> COD
+                                </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Bar (Bottom Fixed) -->
+<div class="absolute bottom-0 left-0 right-0 bg-surface-container-lowest border-t border-outline-variant p-4 px-gutter flex justify-end items-center gap-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
+<button class="h-10 px-6 bg-surface-container-lowest text-on-surface border border-outline-variant rounded font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+                    Request Info
+                </button>
+<button class="h-10 px-6 bg-surface-container-lowest text-primary border border-outline-variant hover:border-primary rounded font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+                    Approve &amp; Fulfill
+                </button>
+<button class="h-10 px-6 bg-error text-on-error rounded font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">block</span>
+                    Decline Order
+                </button>
+</div>
+</div>
+</main>
+
+
+</body></html>
