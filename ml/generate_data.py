@@ -237,7 +237,9 @@ def generate_synthetic_data(n_customers=5000, seed=42):
 if __name__ == "__main__":
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     df = generate_synthetic_data()
-    df.to_csv(os.path.join(BASE_DIR, 'data', 'synthetic_returns_data.csv'), index=False)
+    out_path = os.path.join(BASE_DIR, 'data', 'synthetic_returns_data.csv')
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    df.to_csv(out_path, index=False)
     print(f"Generated {len(df)} records across {df['customer_id'].nunique()} customers.")
     print(f"Overall abuse rate: {df['is_abusive_return'].mean():.2%}")
     print("\nAbuse rate by assigned customer type (sanity check):")

@@ -19,7 +19,7 @@ def load_and_preprocess_data(filepath=os.path.join(BASE_DIR, 'data', 'synthetic_
     
     # Exclude the debugging column and identifiers
     groups = df['customer_id']
-    X = df.drop(columns=['is_abusive_return', 'customer_type_DEBUG_ONLY', 'order_id', 'customer_id'])
+    X = df.drop(columns=['is_abusive_return', 'customer_type_DEBUG_ONLY', 'order_id', 'customer_id', 'address_id', 'payment_method_id'])
     y = df['is_abusive_return']
     
     # Identify categorical and numerical columns
@@ -153,7 +153,9 @@ def train_and_evaluate():
     plt.title('Precision-Recall Curve Comparison')
     plt.legend()
     plt.grid(True)
-    plt.savefig(os.path.join(BASE_DIR, 'docs', 'pr_curve_comparison.png'))
+    out_path = os.path.join(BASE_DIR, 'docs', 'pr_curve_comparison.png')
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    plt.savefig(out_path)
     plt.close()
     print("\nSaved PR Curve Comparison to pr_curve_comparison.png")
 
@@ -165,7 +167,9 @@ def train_and_evaluate():
     plt.title('Precision-Recall Curve')
     plt.legend()
     plt.grid(True)
-    plt.savefig(os.path.join(BASE_DIR, 'docs', 'pr_curve.png'))
+    out_path = os.path.join(BASE_DIR, 'docs', 'pr_curve.png')
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    plt.savefig(out_path)
     plt.close()
     print("Saved Original PR Curve (LR) to pr_curve.png")
     
@@ -178,7 +182,9 @@ def train_and_evaluate():
     plt.title('Cost Analysis: Threshold vs Total Cost')
     plt.legend()
     plt.grid(True)
-    plt.savefig(os.path.join(BASE_DIR, 'docs', 'cost_analysis.png'))
+    out_path = os.path.join(BASE_DIR, 'docs', 'cost_analysis.png')
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    plt.savefig(out_path)
     plt.close()
     print("Saved Original Cost Analysis to cost_analysis.png")
     
@@ -226,7 +232,9 @@ def train_and_evaluate():
             'feature_importances': feat_imp_xgb
         }
     }
-    with open(os.path.join(BASE_DIR, 'models', 'model_artifacts.pkl'), 'wb') as f:
+    out_path = os.path.join(BASE_DIR, 'models', 'model_artifacts.pkl')
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, 'wb') as f:
         pickle.dump(model_artifacts, f)
     print("\nSaved model artifacts (both models) to model_artifacts.pkl")
 

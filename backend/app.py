@@ -48,8 +48,7 @@ def index():
 def get_orders():
     if model is None or orders_df.empty:
         return jsonify({"error": "Model or data not loaded"}), 500
-        
-    features = orders_df.drop(columns=['is_abusive_return', 'customer_type_DEBUG_ONLY', 'order_id', 'customer_id'])
+    features = orders_df.drop(columns=['is_abusive_return', 'customer_type_DEBUG_ONLY', 'order_id', 'customer_id', 'address_id', 'payment_method_id'])
     probs = model.predict_proba(features)[:, 1]
     
     orders_data = []

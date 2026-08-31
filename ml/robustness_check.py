@@ -19,7 +19,7 @@ def run_robustness_check():
         artifacts = pickle.load(f)
     
     groups = df['customer_id']
-    X = df.drop(columns=['is_abusive_return', 'customer_type_DEBUG_ONLY', 'order_id', 'customer_id'])
+    X = df.drop(columns=['is_abusive_return', 'customer_type_DEBUG_ONLY', 'order_id', 'customer_id', 'address_id', 'payment_method_id'])
     y = df['is_abusive_return']
     
     categorical_cols = ['item_category', 'payment_method_type']
@@ -99,7 +99,9 @@ def run_robustness_check():
     print("\nRobustness Check Results:")
     print(df_results.to_string(index=False))
     
-    df_results.to_csv(os.path.join(BASE_DIR, 'data', 'robustness_results.csv'), index=False)
+    out_path = os.path.join(BASE_DIR, 'data', 'robustness_results.csv')
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    df_results.to_csv(out_path, index=False)
     print("\nSaved detailed results to data/robustness_results.csv")
     
     # One-line verdict

@@ -56,32 +56,44 @@ This system catches these patterns *at order time* — before a single item ship
 ### 1. Install dependencies
 
 ```bash
-pip3 install pandas numpy scikit-learn matplotlib streamlit
+pip3 install pandas numpy scikit-learn matplotlib streamlit networkx xgboost flask
 ```
 
 ### 2. Generate data
 
 ```bash
-python3 generate_data.py
+python3 ml/generate_data.py
 ```
 
-Produces `synthetic_returns_data.csv` — 10,000 orders across 5,000 synthetic customers (~9.8% positive class).
+Produces `synthetic_returns_data.csv` in the `data/` folder.
 
 ### 3. Train and evaluate
 
 ```bash
-python3 train_eval.py
+python3 ml/train_eval.py
 ```
 
-Trains a Logistic Regression model, runs cost-analysis to find the optimal decision threshold, and saves `model_artifacts.pkl`, `pr_curve.png`, and `cost_analysis.png`.
+Trains models, finds optimal thresholds, and saves to `models/` and `docs/`.
 
-### 4. Run the demo
+### 4. Optional: Robustness & Ring Detection
 
 ```bash
-python3 -m streamlit run demo.py
+python3 ml/robustness_check.py
+python3 ml/ring_detector.py
 ```
 
-Opens an interactive UI in your browser. Adjust order features in the sidebar and get a live risk score + top 3 contributing factors in plain English.
+### 5. Run the Backend & Frontend
+
+Start the backend:
+```bash
+python3 backend/app.py
+```
+
+In a separate terminal, start the React frontend:
+```bash
+cd frontend
+npm run dev
+```
 
 ---
 

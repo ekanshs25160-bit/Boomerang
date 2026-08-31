@@ -9,6 +9,7 @@ DB_PATH = os.path.join(BASE_DIR, 'data', 'risk_audit.db')
 
 @contextmanager
 def get_db_connection():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     try:
@@ -17,6 +18,7 @@ def get_db_connection():
         conn.close()
 
 def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
