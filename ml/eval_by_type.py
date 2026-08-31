@@ -1,11 +1,14 @@
 import pandas as pd
 import numpy as np
 import pickle
+import os
 from sklearn.metrics import recall_score, precision_score
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 print("Loading data and model...")
-df = pd.read_csv('synthetic_returns_data.csv')
-with open('model_artifacts.pkl', 'rb') as f:
+df = pd.read_csv(os.path.join(BASE_DIR, 'data', 'synthetic_returns_data.csv'))
+with open(os.path.join(BASE_DIR, 'models', 'model_artifacts.pkl'), 'rb') as f:
     artifacts = pickle.load(f)
 
 model = artifacts['model']

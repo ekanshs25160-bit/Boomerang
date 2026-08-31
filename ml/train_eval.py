@@ -8,9 +8,13 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import pickle
+import sys
+import os
 from xgboost import XGBClassifier
 
-def load_and_preprocess_data(filepath='synthetic_returns_data.csv'):
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def load_and_preprocess_data(filepath=os.path.join(BASE_DIR, 'data', 'synthetic_returns_data.csv')):
     df = pd.read_csv(filepath)
     
     # Exclude the debugging column and identifiers
@@ -149,7 +153,7 @@ def train_and_evaluate():
     plt.title('Precision-Recall Curve Comparison')
     plt.legend()
     plt.grid(True)
-    plt.savefig('pr_curve_comparison.png')
+    plt.savefig(os.path.join(BASE_DIR, 'docs', 'pr_curve_comparison.png'))
     plt.close()
     print("\nSaved PR Curve Comparison to pr_curve_comparison.png")
 
@@ -161,7 +165,7 @@ def train_and_evaluate():
     plt.title('Precision-Recall Curve')
     plt.legend()
     plt.grid(True)
-    plt.savefig('pr_curve.png')
+    plt.savefig(os.path.join(BASE_DIR, 'docs', 'pr_curve.png'))
     plt.close()
     print("Saved Original PR Curve (LR) to pr_curve.png")
     
@@ -174,7 +178,7 @@ def train_and_evaluate():
     plt.title('Cost Analysis: Threshold vs Total Cost')
     plt.legend()
     plt.grid(True)
-    plt.savefig('cost_analysis.png')
+    plt.savefig(os.path.join(BASE_DIR, 'docs', 'cost_analysis.png'))
     plt.close()
     print("Saved Original Cost Analysis to cost_analysis.png")
     
@@ -222,7 +226,7 @@ def train_and_evaluate():
             'feature_importances': feat_imp_xgb
         }
     }
-    with open('model_artifacts.pkl', 'wb') as f:
+    with open(os.path.join(BASE_DIR, 'models', 'model_artifacts.pkl'), 'wb') as f:
         pickle.dump(model_artifacts, f)
     print("\nSaved model artifacts (both models) to model_artifacts.pkl")
 

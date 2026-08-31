@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import pickle
+import os
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import precision_score, recall_score, average_precision_score, precision_recall_curve
@@ -7,9 +9,14 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-def run_robustness_check(filepath='synthetic_returns_data.csv'):
-    print("Loading data...")
-    df = pd.read_csv(filepath)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def run_robustness_check():
+    print("Loading data and model...")
+    df = pd.read_csv(os.path.join(BASE_DIR, 'data', 'synthetic_returns_data.csv'))
+    
+    with open(os.path.join(BASE_DIR, 'models', 'model_artifacts.pkl'), 'rb') as f:
+        artifacts = pickle.load(f)
     
     groups = df['customer_id']
     X = df.drop(columns=['is_abusive_return', 'customer_type_DEBUG_ONLY', 'order_id', 'customer_id'])
@@ -75,27 +82,25 @@ def run_robustness_check(filepath='synthetic_returns_data.csv'):
             'Recall': rec_opt
         })
         
-    results_df = pd.DataFrame(results)
+    df_results = pd.DataFrame(results)
     
-    print("\n=== Robustness Check Results ===")
-    print(results_df.to_string(index=False))
+    mean_pr_auc = df_results['PR_AUC'].mean()
+    std_pr_auc = df_results['PR_AUC'].std()
     
-    mean_pr_auc = results_df['PR_AUC'].mean()
-    std_pr_auc = results_df['PR_AUC'].std()
+    mean_prec = df_results['Precision'].mean()
+    std_prec = df_results['Precision'].std()
     
-    mean_prec = results_df['Precision'].mean()
-    std_prec = results_df['Precision'].std()
-    
-    mean_rec = results_df['Recall'].mean()
-    std_rec = results_df['Recall'].std()
+    mean_rec = df_results['Recall'].mean()
+    std_rec = df_results['Recall'].std()
     
     print(f"\n--- Aggregates across {len(seeds)} splits ---")
     print(f"PR-AUC:    {mean_pr_auc:.4f} ± {std_pr_auc:.4f}")
     print(f"Precision: {mean_prec:.4f} ± {std_prec:.4f}")
-    print(f"Recall:    {mean_rec:.4f} ± {std_rec:.4f}")
+    print("\nRobustness Check Results:")
+    print(df_results.to_string(index=False))
     
-    results_df.to_csv('robustness_results.csv', index=False)
-    print("\nSaved results to robustness_results.csv")
+    df_results.to_csv(os.path.join(BASE_DIR, 'data', 'robustness_results.csv'), index=False)
+    print("\nSaved detailed results to data/robustness_results.csv")
     
     # One-line verdict
     is_stable = std_pr_auc < (0.1 * mean_pr_auc)

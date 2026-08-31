@@ -1,8 +1,19 @@
+import os
 import pickle
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
+import db
 
 app = Flask(__name__)
+
+# Initialize SQLite database
+try:
+    db.init_db()
+except Exception as e:
+    print(f"Failed to initialize database: {e}")
+
+# Base directory is one level up from backend
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Load artifacts globally
 artifacts = None
@@ -11,7 +22,7 @@ opt_threshold = 0.5
 feature_names = []
 
 try:
-    with open('model_artifacts.pkl', 'rb') as f:
+    with open(os.path.join(BASE_DIR, 'models', 'model_artifacts.pkl'), 'rb') as f:
         artifacts = pickle.load(f)
         model = artifacts['logistic_regression']['model']
         opt_threshold = artifacts['logistic_regression']['optimal_threshold']
@@ -21,7 +32,7 @@ except Exception as e:
 
 # Load orders globally
 try:
-    df = pd.read_csv('synthetic_returns_data.csv')
+    df = pd.read_csv(os.path.join(BASE_DIR, 'data', 'synthetic_returns_data.csv'))
     high_risk = df[df['is_abusive_return'] == 1].sample(min(10, len(df[df['is_abusive_return'] == 1])), random_state=42)
     low_risk = df[df['is_abusive_return'] == 0].sample(20 - len(high_risk), random_state=42)
     orders_df = pd.concat([high_risk, low_risk]).sample(frac=1, random_state=42).reset_index(drop=True)
@@ -84,7 +95,41 @@ def get_orders():
             "top_factors": top_factors
         })
         
+    # Persist the detection run and order decisions to the database
+    try:
+        db.record_detection_run('logistic_regression', opt_threshold, orders_data)
+    except Exception as e:
+        print(f"Failed to record detection run: {e}")
+        
     return jsonify(orders_data)
 
+@app.route('/api/orders/<order_id>/action', methods=['POST'])
+def record_order_action(order_id):
+    data = request.json
+    action = data.get('action')
+    
+    if not action or action not in ['approved', 'declined', 'info_requested']:
+        return jsonify({"error": "Invalid action"}), 400
+        
+    try:
+        success = db.record_human_action(order_id, action)
+        if success:
+            return jsonify({"status": "success", "message": f"Action '{action}' recorded for order {order_id}"})
+        else:
+            return jsonify({"error": "Order not found or action already recorded"}), 404
+    except Exception as e:
+        print(f"Failed to record action: {e}")
+        return jsonify({"error": "Database error"}), 500
+
+@app.route('/api/audit-log')
+def get_audit_log():
+    try:
+        limit = int(request.args.get('limit', 50))
+        runs = db.get_audit_log(limit)
+        return jsonify(runs)
+    except Exception as e:
+        print(f"Failed to fetch audit log: {e}")
+        return jsonify({"error": "Database error"}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)

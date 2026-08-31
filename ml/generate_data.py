@@ -18,6 +18,7 @@ kept consistent with v1 so train_eval.py / demo.py don't need schema changes.
 import numpy as np
 import pandas as pd
 import uuid
+import os
 
 def generate_synthetic_data(n_customers=5000, seed=42):
     rng = np.random.default_rng(seed)
@@ -38,6 +39,26 @@ def generate_synthetic_data(n_customers=5000, seed=42):
 
     customer_ids = [str(uuid.uuid4())[:8] for _ in range(n_customers)]
     categories_pool = ['apparel', 'electronics', 'home', 'beauty', 'grocery']
+
+    # --- ID Generation Setup ---
+    id_rng = np.random.default_rng(seed + 1)
+    
+    # Pre-assign rings for ring_member customers
+    ring_member_indices = np.where(assigned_types == 'ring_member')[0]
+    n_rings = max(1, len(ring_member_indices) // 5) # average size 5 per ring
+    
+    ring_addresses = [f"ADDR-RING-{i}" for i in range(n_rings)]
+    ring_payments = [f"PAY-RING-{i}" for i in range(n_rings)]
+    
+    # Pool for innocent reuse
+    innocent_addresses = [f"ADDR-SHARED-{i}" for i in range(100)]
+    innocent_payments = [f"PAY-SHARED-{i}" for i in range(100)]
+    
+    customer_ring_assignments = {}
+    for i, idx in enumerate(ring_member_indices):
+        ring_idx = i % n_rings
+        customer_ring_assignments[idx] = ring_idx
+    # ---------------------------
 
     rows = []
 
@@ -102,6 +123,23 @@ def generate_synthetic_data(n_customers=5000, seed=42):
             if ctype == 'ring_member':
                 payment_reuse = int(rng.random() < 0.85)
 
+            # Assign concrete IDs based on the boolean flags
+            if address_reuse == 1:
+                if ctype == 'ring_member':
+                    address_id = ring_addresses[customer_ring_assignments[i]]
+                else:
+                    address_id = id_rng.choice(innocent_addresses)
+            else:
+                address_id = f"ADDR-{uuid.uuid4().hex[:8]}"
+                
+            if payment_reuse == 1:
+                if ctype == 'ring_member':
+                    payment_id = ring_payments[customer_ring_assignments[i]]
+                else:
+                    payment_id = id_rng.choice(innocent_payments)
+            else:
+                payment_id = f"PAY-{uuid.uuid4().hex[:8]}"
+
             orders_last_24h = int(rng.poisson(lam=0.2))
             if ctype == 'ring_member':
                 orders_last_24h = int(rng.poisson(lam=3))
@@ -134,9 +172,11 @@ def generate_synthetic_data(n_customers=5000, seed=42):
                 'shipping_billing_mismatch': shipping_billing_mismatch,
                 'is_new_shipping_address': is_new_shipping_address,
                 'address_reuse_across_accounts': address_reuse,
+                'address_id': address_id,
                 'payment_method_type': payment_method_type,
                 'is_new_payment_method': is_new_payment_method,
                 'payment_method_reuse_across_accounts': payment_reuse,
+                'payment_method_id': payment_id,
                 'orders_in_last_24h': orders_last_24h,
                 'orders_in_last_24h_same_address': orders_last_24h_same_addr,
             }
@@ -189,14 +229,15 @@ def generate_synthetic_data(n_customers=5000, seed=42):
             'total_past_orders', 'historical_return_rate', 'historical_return_value_rate',
             'days_since_last_return', 'order_value', 'item_category', 'quantity',
             'is_multi_variant_order', 'discount_pct_applied', 'shipping_billing_mismatch',
-            'is_new_shipping_address', 'address_reuse_across_accounts', 'payment_method_type',
-            'is_new_payment_method', 'payment_method_reuse_across_accounts', 'orders_in_last_24h',
+            'is_new_shipping_address', 'address_reuse_across_accounts', 'address_id', 'payment_method_type',
+            'is_new_payment_method', 'payment_method_reuse_across_accounts', 'payment_method_id', 'orders_in_last_24h',
             'orders_in_last_24h_same_address', 'is_abusive_return']
     return df[cols]
 
 if __name__ == "__main__":
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     df = generate_synthetic_data()
-    df.to_csv('synthetic_returns_data.csv', index=False)
+    df.to_csv(os.path.join(BASE_DIR, 'data', 'synthetic_returns_data.csv'), index=False)
     print(f"Generated {len(df)} records across {df['customer_id'].nunique()} customers.")
     print(f"Overall abuse rate: {df['is_abusive_return'].mean():.2%}")
     print("\nAbuse rate by assigned customer type (sanity check):")

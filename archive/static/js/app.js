@@ -3,6 +3,7 @@ let selectedOrderId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchOrders();
+    setupActionListeners();
 });
 
 async function fetchOrders() {
@@ -39,7 +40,7 @@ function renderQueue() {
             </div>
             <div class="flex justify-between items-end mt-4 pl-2">
                 <span class="font-body-md text-body-md text-on-surface-variant">${order.customer_id.substring(0,8)}...</span>
-                <span class="font-headline-sm text-headline-sm text-on-surface">$${order.order_value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                <span class="font-headline-sm text-headline-sm text-on-surface">₹${order.order_value.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
         `;
         queueContainer.appendChild(item);
@@ -59,7 +60,7 @@ function selectOrder(orderId) {
     // Header
     document.getElementById('detail-order-id').textContent = `#${order.order_id}`;
     document.getElementById('detail-customer-id').textContent = order.customer_id;
-    document.getElementById('detail-order-value').textContent = `$${order.order_value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('detail-order-value').textContent = `₹${order.order_value.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
     // Risk Score
     const scorePct = Math.round(order.risk_score * 100);
@@ -102,4 +103,57 @@ function selectOrder(orderId) {
     document.getElementById('snapshot-past-orders').textContent = order.total_past_orders;
     document.getElementById('snapshot-return-rate').textContent = `${(order.historical_return_rate * 100).toFixed(1)}%`;
     document.getElementById('snapshot-orders-24h').textContent = order.orders_in_last_24h;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 p-4 rounded shadow-lg text-white font-body-md z-50 transition-opacity duration-300 ${type === 'error' ? 'bg-error' : 'bg-green-600'}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function setupActionListeners() {
+    document.getElementById('btn-create-case')?.addEventListener('click', () => {
+        showToast('Create Case dialog opened (Demo)', 'success');
+    });
+    
+    document.getElementById('btn-request-info')?.addEventListener('click', () => {
+        if (!selectedOrderId) return;
+        showToast(`Info request sent to customer for order #${selectedOrderId}`, 'success');
+    });
+    
+    document.getElementById('btn-approve')?.addEventListener('click', () => {
+        if (!selectedOrderId) return;
+        showToast(`Order #${selectedOrderId} approved`, 'success');
+        removeAndSelectNext();
+    });
+    
+    document.getElementById('btn-decline')?.addEventListener('click', () => {
+        if (!selectedOrderId) return;
+        showToast(`Order #${selectedOrderId} declined — flagged as high risk`, 'error');
+        console.log(`Order #${selectedOrderId} declined — flagged as high risk`);
+        removeAndSelectNext();
+    });
+}
+
+function removeAndSelectNext() {
+    const idx = currentOrders.findIndex(o => o.order_id === selectedOrderId);
+    if (idx !== -1) {
+        currentOrders.splice(idx, 1);
+        document.getElementById('queue-count').textContent = `${currentOrders.length} Items`;
+        
+        if (currentOrders.length > 0) {
+            const nextIdx = Math.min(idx, currentOrders.length - 1);
+            selectOrder(currentOrders[nextIdx].order_id);
+        } else {
+            selectedOrderId = null;
+            document.getElementById('empty-state').style.display = 'flex';
+            document.getElementById('detail-view').style.display = 'none';
+            renderQueue();
+        }
+    }
 }
