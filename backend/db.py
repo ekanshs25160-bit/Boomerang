@@ -46,6 +46,23 @@ def init_db():
             )
         ''')
         
+        cursor.execute("DROP TABLE IF EXISTS detected_rings")
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS detected_rings (
+                ring_id TEXT PRIMARY KEY,
+                run_id INTEGER NOT NULL,
+                member_count INTEGER NOT NULL,
+                shared_entity_type TEXT NOT NULL,
+                shared_entity_id TEXT NOT NULL,
+                group_abuse_rate REAL NOT NULL,
+                risk_level TEXT NOT NULL,
+                status TEXT DEFAULT 'new',
+                created_at TEXT NOT NULL,
+                members TEXT NOT NULL,
+                dynamic_chips TEXT NOT NULL
+            )
+        ''')
+        
         conn.commit()
 
 def record_detection_run(model_used, optimal_threshold, orders_data):
@@ -130,5 +147,106 @@ def get_audit_log(limit=50):
             for decision in run['decisions']:
                 decision['top_factors'] = json.loads(decision['top_factors'])
                 decision['flagged'] = bool(decision['flagged'])
+                decision['flagged'] = bool(decision['flagged'])
                 
         return runs
+
+def get_overview_stats():
+    """
+    Retrieves aggregate stats for the most recent detection run.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT MAX(run_id) as latest_run FROM detection_runs")
+        row = cursor.fetchone()
+        latest_run = row['latest_run'] if row and row['latest_run'] else None
+        
+        if not latest_run:
+            return None
+            
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_scored,
+                SUM(CASE WHEN flagged = 1 THEN 1 ELSE 0 END) as flagged_count,
+                SUM(CASE WHEN risk_score < 0.33 THEN 1 ELSE 0 END) as risk_low,
+                SUM(CASE WHEN risk_score >= 0.33 AND risk_score < 0.66 THEN 1 ELSE 0 END) as risk_medium,
+                SUM(CASE WHEN risk_score >= 0.66 THEN 1 ELSE 0 END) as risk_high,
+                SUM(CASE WHEN human_action IS NULL THEN 1 ELSE 0 END) as queue_new,
+                SUM(CASE WHEN human_action = 'approved' THEN 1 ELSE 0 END) as queue_approved,
+                SUM(CASE WHEN human_action = 'declined' THEN 1 ELSE 0 END) as queue_declined
+            FROM order_decisions
+            WHERE run_id = ?
+        """, (latest_run,))
+        
+        return dict(cursor.fetchone())
+
+def record_detected_rings(rings_data):
+    timestamp = datetime.utcnow().isoformat()
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO detection_runs (timestamp, model_used, optimal_threshold, n_orders_scored)
+            VALUES (?, ?, ?, ?)
+        ''', (timestamp, 'ring_detector', 0.0, len(rings_data)))
+        run_id = cursor.lastrowid
+        
+        for ring in rings_data:
+            cursor.execute('''
+                INSERT INTO detected_rings 
+                (ring_id, run_id, member_count, shared_entity_type, shared_entity_id, group_abuse_rate, risk_level, status, created_at, members, dynamic_chips)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?)
+            ''', (
+                ring['ring_id'],
+                run_id,
+                ring['member_count'],
+                ring['shared_entity_type'],
+                ring['shared_entity_id'],
+                ring['group_abuse_rate'],
+                ring['risk_level'],
+                timestamp,
+                json.dumps(ring['members']),
+                json.dumps(ring.get('dynamic_chips', []))
+            ))
+        conn.commit()
+        return run_id
+
+def get_detected_rings(min_score=None, status=None):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        query = "SELECT * FROM detected_rings WHERE 1=1"
+        params = []
+        
+        if min_score is not None:
+            query += " AND group_abuse_rate >= ?"
+            params.append(float(min_score) / 100.0) # assuming min_score is percentage
+            
+        if status and status != 'All':
+            query += " AND status = ?"
+            params.append(status.lower())
+            
+        query += " ORDER BY group_abuse_rate DESC, created_at DESC"
+        
+        cursor.execute(query, params)
+        rings = [dict(row) for row in cursor.fetchall()]
+        
+        for r in rings:
+            r['members'] = json.loads(r['members'])
+            r['dynamic_chips'] = json.loads(r['dynamic_chips']) if 'dynamic_chips' in r else []
+            
+        return rings
+
+def get_detected_ring(ring_id):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM detected_rings WHERE ring_id = ?", (ring_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        ring = dict(row)
+        ring['members'] = json.loads(ring['members'])
+        ring['dynamic_chips'] = json.loads(ring['dynamic_chips']) if 'dynamic_chips' in ring else []
+        return ring

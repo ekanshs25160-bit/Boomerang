@@ -49,18 +49,43 @@ def main():
             
             # A ring is suspected if its group abuse rate is 1.5x the population baseline
             if group_abuse_rate > overall_abuse_rate * 1.5:
-                # Gather shared entities for report
-                shared_entities = set()
+                shared_entity_type = "unknown"
+                shared_entity_id = "unknown"
                 for u in comp:
                     for v in comp:
                         if u != v and G.has_edge(u, v):
-                            shared_entities.add(f"{G[u][v]['type']} ({G[u][v]['shared_id']})")
-                            
+                            shared_entity_type = 'address' if G[u][v]['type'] == 'address' else 'payment_method'
+                            shared_entity_id = G[u][v]['shared_id']
+                            break
+                    if shared_entity_type != "unknown":
+                        break
+                        
+                comp_df = df[df['customer_id'].isin(comp)]
+                cod_pct = (comp_df['payment_method_type'] == 'COD').mean()
+                
+                dynamic_chips = []
+                if group_abuse_rate > 0.5:
+                    dynamic_chips.append(f"Cluster exhibits severe serial-returning behavior ({int(group_abuse_rate * 100)}% average).")
+                if cod_pct > 0.6:
+                    dynamic_chips.append(f"Sudden spike in Cash-on-Delivery (COD) orders ({int(cod_pct * 100)}% of cluster).")
+                if shared_entity_type == 'address':
+                    dynamic_chips.append("Multiple accounts funneling orders to 1 shared delivery destination(s).")
+                elif shared_entity_type == 'payment_method':
+                    dynamic_chips.append(f"Identical payment instruments used across {len(comp)} isolated accounts.")
+                        
+                import uuid
+                ring_id = f"ring_{uuid.uuid4().hex[:8]}"
+                risk_level = "high" if group_abuse_rate >= 0.6 else ("medium" if group_abuse_rate >= 0.3 else "low")
+                
                 suspected_rings.append({
-                    'members': list(comp),
-                    'size': len(comp),
+                    'ring_id': ring_id,
+                    'member_count': len(comp),
+                    'shared_entity_type': shared_entity_type,
+                    'shared_entity_id': shared_entity_id,
                     'group_abuse_rate': group_abuse_rate,
-                    'shared_entities': list(shared_entities)
+                    'risk_level': risk_level,
+                    'members': list(comp),
+                    'dynamic_chips': dynamic_chips
                 })
     
     print("\n" + "="*80)
@@ -75,12 +100,12 @@ def main():
     
     for i, ring in enumerate(suspected_rings, 1):
         print(f"Ring #{i}:")
-        print(f"  Size: {ring['size']} accounts")
+        print(f"  Size: {ring['member_count']} accounts")
         print(f"  Group Abuse Rate: {ring['group_abuse_rate']:.2%}")
-        print(f"  Shared Entities: {', '.join(ring['shared_entities'])}")
+        print(f"  Shared Entities: {ring['shared_entity_type']} ({ring['shared_entity_id']})")
         print(f"  Members: {', '.join(ring['members'])}")
         
-        total_implicated += ring['size']
+        total_implicated += ring['member_count']
         for member in ring['members']:
             if G.nodes[member]['ctype'] == 'ring_member':
                 caught_true_ring_members += 1
@@ -104,6 +129,14 @@ def main():
         precision = caught_true_ring_members / total_implicated
         print(f"Precision (fraction of flagged accounts that are true ring members): {precision:.2%} ({caught_true_ring_members}/{total_implicated})")
     print("=" * 80)
+    
+    if suspected_rings:
+        import sys
+        sys.path.append(BASE_DIR)
+        from backend import db
+        print(f"\nPersisting {len(suspected_rings)} rings to database...")
+        db.record_detected_rings(suspected_rings)
+        print("Done.")
 
 if __name__ == '__main__':
     main()

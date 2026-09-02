@@ -14,7 +14,20 @@ const OrderQueue = ({ orders, loading, error, selectedOrderId, onSelectOrder }) 
         {error && <div className="text-center text-error py-8">{error}</div>}
         
         {!loading && !error && orders.map((order) => {
-          const isHighRisk = order.risk_score >= order.threshold;
+          let riskLevel = 'Low';
+          let riskColorClass = 'bg-green-500';
+          let riskBadgeClass = 'bg-green-500/10 text-green-700 border-green-500';
+          
+          if (order.risk_score >= 0.55) {
+            riskLevel = 'High';
+            riskColorClass = 'bg-error';
+            riskBadgeClass = 'bg-error/10 text-error border-error';
+          } else if (order.risk_score >= 0.35) {
+            riskLevel = 'Medium';
+            riskColorClass = 'bg-yellow-500';
+            riskBadgeClass = 'bg-yellow-500/10 text-yellow-700 border-yellow-500';
+          }
+          
           const isSelected = selectedOrderId === order.order_id;
           
           return (
@@ -23,11 +36,11 @@ const OrderQueue = ({ orders, loading, error, selectedOrderId, onSelectOrder }) 
               onClick={() => onSelectOrder(order.order_id)}
               className={`bg-surface-container-lowest border p-4 rounded cursor-pointer relative overflow-hidden transition-colors group ${isSelected ? 'ring-1 ring-primary-fixed border-outline-variant shadow-sm' : 'border-outline-variant hover:border-outline'}`}
             >
-              <div className={`absolute left-0 top-0 bottom-0 w-1 ${isHighRisk ? 'bg-error' : 'bg-yellow-500'}`}></div>
+              <div className={`absolute left-0 top-0 bottom-0 w-1 ${riskColorClass}`}></div>
               <div className="flex justify-between items-start mb-2">
                 <span className={`font-label-md text-label-md text-on-surface ${!isSelected ? 'group-hover:text-primary transition-colors' : ''}`}>#{order.order_id}</span>
-                <div className={`${isHighRisk ? 'bg-error/10 text-error border-error' : 'bg-yellow-500/10 text-yellow-700 border-yellow-500'} font-label-sm text-label-sm px-2 py-1 rounded border-l`}>
-                  {isHighRisk ? 'High' : 'Medium'}
+                <div className={`${riskBadgeClass} font-label-sm text-label-sm px-2 py-1 rounded border-l`}>
+                  {riskLevel}
                 </div>
               </div>
               <div className="flex justify-between items-end mt-4">

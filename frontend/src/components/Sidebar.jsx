@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Sidebar = () => {
+const Sidebar = ({ searchTerm, onSearchChange, onGenerateData, isGenerating, activeTab, onTabChange }) => {
   return (
     <>
       {/* TopNavBar */}
@@ -11,7 +11,13 @@ const Sidebar = () => {
         <div className="flex items-center gap-6">
           <div className="relative w-64">
             <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
-            <input className="w-full h-10 pl-8 pr-4 bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary-fixed rounded text-body-md outline-none transition-all" placeholder="Search orders..." type="text" />
+            <input 
+              className="w-full h-10 pl-8 pr-4 bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary-fixed rounded text-body-md outline-none transition-all" 
+              placeholder="Search orders..." 
+              type="text" 
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
           </div>
           <div className="flex items-center gap-4">
             <button className="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low p-2 rounded-full h-10 w-10 flex items-center justify-center scale-95 active:opacity-80 transition-transform">
@@ -19,6 +25,14 @@ const Sidebar = () => {
             </button>
             <button className="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low p-2 rounded-full h-10 w-10 flex items-center justify-center scale-95 active:opacity-80 transition-transform">
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>help_outline</span>
+            </button>
+            <button 
+              onClick={onGenerateData}
+              disabled={isGenerating}
+              className="h-10 px-4 bg-tertiary-container text-on-tertiary-container rounded font-label-md text-label-md hover:opacity-90 transition-opacity flex items-center gap-2 border border-outline-variant disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[18px]">database</span>
+              {isGenerating ? 'Generating...' : 'Generate Data'}
             </button>
             <button className="h-10 px-4 bg-primary text-on-primary rounded font-label-md text-label-md hover:opacity-90 transition-opacity">
               Create Case
@@ -43,29 +57,42 @@ const Sidebar = () => {
         </div>
         <ul className="flex flex-col gap-2 mt-4 px-2 w-full font-body-md text-body-md">
           <li className="">
-            <a className="flex items-center gap-3 py-3 px-4 rounded w-full text-surface-bright font-bold border-l-2 border-primary-fixed bg-on-primary-fixed-variant transition-colors duration-200 ease-in-out" href="#">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>assignment_late</span>
+            <button 
+              onClick={() => onTabChange('overview')}
+              className={`flex items-center gap-3 py-3 px-4 rounded w-full transition-colors duration-200 ease-in-out ${activeTab === 'overview' ? 'text-surface-bright font-bold border-l-2 border-primary-fixed bg-on-primary-fixed-variant' : 'text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant pl-4 ml-[2px]'}`}
+            >
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'overview' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
+              Overview
+            </button>
+          </li>
+          <li className="">
+            <button 
+              onClick={() => onTabChange('queue')}
+              className={`flex items-center gap-3 py-3 px-4 rounded w-full transition-colors duration-200 ease-in-out ${activeTab === 'queue' ? 'text-surface-bright font-bold border-l-2 border-primary-fixed bg-on-primary-fixed-variant' : 'text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant pl-4 ml-[2px]'}`}
+            >
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'queue' ? "'FILL' 1" : "'FILL' 0" }}>assignment_late</span>
               Queue
-            </a>
+            </button>
           </li>
           <li className="">
-            <a className="flex items-center gap-3 py-3 px-4 rounded w-full text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant transition-colors transition-all duration-200 ease-in-out pl-4 ml-[2px]" href="#">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>insights</span>
-              Analytics
-            </a>
+            <button 
+              onClick={() => onTabChange('rings')}
+              className={`flex items-center gap-3 py-3 px-4 rounded w-full transition-colors duration-200 ease-in-out ${activeTab === 'rings' ? 'text-surface-bright font-bold border-l-2 border-primary-fixed bg-on-primary-fixed-variant' : 'text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant pl-4 ml-[2px]'}`}
+            >
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'rings' ? "'FILL' 1" : "'FILL' 0" }}>group_remove</span>
+              Abuse Rings
+            </button>
           </li>
           <li className="">
-            <a className="flex items-center gap-3 py-3 px-4 rounded w-full text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant transition-colors transition-all duration-200 ease-in-out pl-4 ml-[2px]" href="#">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>rule</span>
-              Rules
-            </a>
+            <button 
+              onClick={() => onTabChange('audit')}
+              className={`flex items-center gap-3 py-3 px-4 rounded w-full transition-colors duration-200 ease-in-out ${activeTab === 'audit' ? 'text-surface-bright font-bold border-l-2 border-primary-fixed bg-on-primary-fixed-variant' : 'text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant pl-4 ml-[2px]'}`}
+            >
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'audit' ? "'FILL' 1" : "'FILL' 0" }}>history</span>
+              Audit Log
+            </button>
           </li>
-          <li className="mt-auto pt-8">
-            <a className="flex items-center gap-3 py-3 px-4 rounded w-full text-on-secondary-container dark:text-on-secondary-fixed-variant hover:text-surface-bright hover:bg-on-primary-fixed-variant transition-colors transition-all duration-200 ease-in-out pl-4 ml-[2px]" href="#">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>settings</span>
-              Settings
-            </a>
-          </li>
+
         </ul>
       </nav>
     </>
